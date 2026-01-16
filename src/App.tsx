@@ -21,12 +21,36 @@ function App() {
   const [message, setMessage] = useState('')
   const mapRef = useRef<L.Map>(null)
   const mapDivRef = useRef<HTMLDivElement>(null)
+  const clickMarkerRef = useRef<L.Marker>(null)
 
   useEffect(() => {
     if (mapDivRef.current && !mapRef.current) {
-      const map = L.map(mapDivRef.current).setView([48.8566, 2.3522], 13)
+      mapDivRef.current.innerHTML = ''
+      const map = L.map(mapDivRef.current).setView([47.7484, -3.3700], 15)
       L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map)
+           
+      map.on('click', async (e) => {
+        const { lat, lng } = e.latlng
+        if (clickMarkerRef.current) {
+          map.removeLayer(clickMarkerRef.current)
+        }
+        
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`
+        )
+        const data = await res.json()
+        
+        const addr = data.display_name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`
+        setAddress(addr)
+        
+        clickMarkerRef.current = L.marker([lat, lng])
+          .addTo(map)
+          .bindPopup(`<b>${addr}</b>`)
+          .openPopup()
+      })
+      
       mapRef.current = map
+    
     }
   }, [])
 
@@ -41,23 +65,22 @@ function App() {
   }
 
   const generateLoopRoute = async (lat: number, lng: number, targetDistanceKm: number) => {
-    const waypoints = [[lng, lat]]
-
-    const numPoints = 6
-    const totalCircumferenceKm = targetDistanceKm * 0.50
-
-    const radiusKm = totalCircumferenceKm / (2 * Math.PI)
-    const radiusDegrees = radiusKm / 111
-
-    const startAngle = Math.random() * 2 * Math.PI
-
-    for (let i = 0; i < numPoints; i++) {
-      const angle = startAngle + (i / numPoints) * 2 * Math.PI
-      waypoints.push([
-        lng + radiusDegrees * Math.cos(angle),
-        lat + radiusDegrees * Math.sin(angle)
-      ])
-    }
+  const numPoints = 5 + Math.floor(Math.random() * 5) // 5-9
+  const baseRadius = (targetDistanceKm * 0.5) / (2 * Math.PI) / 111
+  const startAngle = Math.random() * 2 * Math.PI
+  const waypoints = [[lng, lat]]
+  
+  for (let i = 0; i < numPoints; i++) {
+    const angleVariation = (i / numPoints) * 2 * Math.PI + startAngle
+    const radiusVariation = baseRadius * (0.6 + Math.random() * 0.8) // 60-140%
+    const waveVariation = Math.sin(i * 0.7) * 0.2 * baseRadius
+    
+    waypoints.push([
+      lng + (radiusVariation + waveVariation) * Math.cos(angleVariation),
+      lat + (radiusVariation + waveVariation) * Math.sin(angleVariation)
+    ])
+  }
+    
     waypoints.push([lng, lat])
 
     const coords = waypoints.map(w => w.join(',')).join(';')
@@ -83,12 +106,11 @@ function App() {
 
     const distKm = parseFloat(distance)
     console.log(distKm);
-  for (let i = 0; i < 3; i++) {
     const route = await generateLoopRoute(coords.lat, coords.lng, distKm)
     if (!route || !mapRef.current) return
 
     const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24', '#f0932b']
-    const color = colors[(loops.length + i) % colors.length]
+    const color = colors[loops.length % colors.length]
   
     const polyline = L.polyline(route.coords, { color, weight: 4 }).addTo(mapRef.current)
     mapRef.current.fitBounds(polyline.getBounds())
@@ -102,16 +124,13 @@ function App() {
       color,
       polyline
     }])
-  
-    setMessage('Boucles ajoutée !')
-  }
-
   }
 
   return (
     <>
       <Helmet>
-        <title>🗺️ Route Shuffle</title>
+        <title>Route Shuffle</title>
+        <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗺️</text></svg>" />
         <meta name="description" content="Generate your own loop !" />
       </Helmet>
       <div className="main-page">
@@ -131,7 +150,7 @@ function App() {
           />
 
           <button className="add-btn" onClick={addLoop}>
-            Générer 3 boucles de {distance} km
+            Générer 1 boucle de {distance} km
           </button>
           <div className="status">{message}</div>
           <div className="loops-count">📍 Boucles: {loops.length}</div>
