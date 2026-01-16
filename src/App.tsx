@@ -129,13 +129,13 @@ function App() {
   return (
     <>
       <Helmet>
-        <title>Route Shuffle</title>
+        <title>Make My Loop</title>
         <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗺️</text></svg>" />
         <meta name="description" content="Generate your own loop !" />
       </Helmet>
       <div className="main-page">
         <div className="sidebar">
-          <h1>🗺️ Route Loop Generator</h1>
+          <h1>🗺️ Make My Loop</h1>
           <input 
             value={address} 
             onChange={(e) => setAddress(e.target.value)} 
@@ -154,19 +154,16 @@ function App() {
           </button>
           <div className="status">{message}</div>
           <div className="loops-count">📍 Boucles: {loops.length}</div>
-          <div className="loops-list">
+          <ul className="loops-list">
             {loops.slice(-6).map(loop => (
-              <div key={loop.id} className="loop-item" style={{ borderLeftColor: loop.color }}>
-                <div>
-                  <div className="loop-title">{loop.address}</div>
-                  <div className="loop-distances">
-                    🎯 {loop.distance.toFixed(1)}km → 📏 {loop.actualDistance}km
-                  </div>
+              <li key={loop.id} className="loop-item" style={{ borderRightColor: loop.color }}>
+                <div className="loop-title">{loop.address}</div>
+                <div className="loop-distances">
+                  🎯 {loop.distance.toFixed(1)}km → 📏 {loop.actualDistance}km
                 </div>
-                <div className="loop-color" style={{ backgroundColor: loop.color }}></div>
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
         <div className="map-container" ref={mapDivRef} />
       </div>
